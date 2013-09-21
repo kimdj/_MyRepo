@@ -1,9 +1,6 @@
 #include <iostream>
 using namespace std;
 
-
-void prototype();
-
 int main(void)
 {
 	printf("Hola\n");	
@@ -22,9 +19,4 @@ int main(void)
 	prototype();
 
 	return 0;
-}
-
-void prototype(void)
-{
-	cout << "BINGO!!!!";
 }
