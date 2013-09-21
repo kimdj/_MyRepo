@@ -11,10 +11,4 @@ int main(void)
 	{
 		++a;
 		b*=b;
-		cout << a << endl;
-	}
-
-	cout << "Final b: " << b << endl << '\n';
-
-	return 0;
 }
