@@ -1,0 +1,151 @@
+#!/bin/bash
+# Script Name: netgroupmodify_noop
+# Written by: _sharp
+
+# Synopsis:
+#
+# netgroupmodify [ -D binddn ] [ -o no-op mode ] [ -n netgroup ] [ -d delete entries ] [ -a add entries ]
+#
+# Example:
+#
+# netgroupmodify -D uid=ADMIN,cn=cat-access,ou=netgroup,dn=catnip -n cat-access -a auser buser cuser
+#
+#
+#
+#####################################################################################
+: <<COMMENTBLOCK
+
+Variables:
+	host
+	attribute[]
+	bindDNpasswd
+	userEntry
+	hostEntry
+	fullEntry
+	bindDN
+	bindDNpasswd
+	modifyDC
+	modifyOU
+	modifyCN
+	modifyType
+	mode
+	newline
+
+Functions:
+	_modifyLDAP
+
+COMMENTBLOCK
+#####################################################################################
+
+host=ldap.cat.pdx.edu
+modifyDC=catnip
+modifyOU=Netgroup
+#modifyCN=
+mode=0
+
+attribute=()  # ATTRIBUTE ARRAY (i.e. list of users/hosts)
+declare -a attribute
+
+####  MODIFY LDAP USER  ####
+function _modifyLDAP () {
+        newline=$'\n'
+	read -s -p "DN password: " bindDNpasswd  # -s input not echoed; -p user prompt
+	echo
+
+	if [[ "${attribute[0]}" == *.* ]]; then  # if arg is in host format (i.e. cat.pdx.edu)
+		for attribute in "${attribute[@]}"; do
+	        	hostEntry="nisNetgroupTriple: (${attribute},-,)"
+			fullEntry=${fullEntry}${hostEntry}${newline}
+		done
+
+		# HOST MODIFY ENTRY FORMAT
+		if [[ ${mode} == 1 ]]; then
+			cat <<-EOL
+				The following entry would be modified accordingly:
+
+				dn: cn=${modifyCN},ou=${modifyOU},dc=${modifyDC}
+				changetype: modify
+				${modifyType}: nisNetgroupTriple
+				${fullEntry}
+				EOL
+		else
+			ldapmodify -D ${bindDN} -w ${bindDNpasswd} -h ${host} <<-EOL
+				dn: cn=${modifyCN},ou=${modifyOU},dc=${modifyDC}
+				changetype: modify
+				${modifyType}: nisNetgroupTriple
+				${fullEntry}
+				EOL
+		fi
+	else  # if arg is in user format (i.e. jdoe)
+		for attribute in "${attribute[@]}"; do
+	        	userEntry="nisNetgroupTriple: (-,${attribute},)"
+                        fullEntry=${fullEntry}${userEntry}${newline}
+                done
+
+		# USER MODIFY ENTRY FORMAT
+		if [[ ${mode} == 1 ]]; then
+			cat <<-EOL
+				The following entry would be modified accordingly:
+
+				dn: cn=${modifyCN},ou=${modifyOU},dc=${modifyDC}
+				changetype: modify
+				${modifyType}: nisNetgroupTriple
+				${fullEntry}
+				EOL
+		else
+			ldapmodify -D ${bindDN} -w ${bindDNpasswd} -h ${host} <<-EOL
+				dn: cn=${modifyCN},ou=${modifyOU},dc=${modifyDC}
+				changetype: modify
+				${modifyType}: nisNetgroupTriple
+				${fullEntry}
+				EOL
+		fi
+	fi
+}
+
+#####################################################################################
+
+#### GET OPTIONS/PARAMETERS ITERATION ####
+while getopts ":D:on:da" optname; do
+    case "$optname" in
+        "D")
+            # BIND DN ( AUTHENTICATION )
+            bindDN=$OPTARG
+            ;;
+	    "o")
+            # NO-OP MODE
+            mode=1
+            ;;
+        "n")
+            # COMMON NAME
+            modifyCN=$OPTARG
+            ;;
+        "d")
+            # DELETE ATTRIBUTE
+	    modifyType="delete"
+            ;;
+        "a")
+            # ADD ATTRIBUTE
+	    modifyType="add"
+            ;;
+        "?")
+            echo "Unknown option $OPTARG"
+            ;;
+        ":")
+            echo "No argument value for option $OPTARG"
+            ;;
+        *)
+            echo "!! Unknown error occurred !!"
+            ;;
+    esac
+done
+
+shift $(( OPTIND - 1 ))
+for ARG in "$@"; do
+    attribute=( "${attribute[@]}" "$ARG" )
+done
+
+#####################################################################################
+
+_modifyLDAP
+exit 0
